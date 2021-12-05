@@ -1,0 +1,147 @@
+version: '3.8'
+
+services:
+  zookeeper-1:
+    image: docker.io/bitnami/zookeeper:3.7
+    environment:
+      ZOO_SERVER_ID: 1
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+      ZOO_SERVERS: "zookeeper-1:2888:3888,zookeeper-2:2888:3888,zookeeper-3:2888:3888"
+      ZOO_4LW_COMMANDS_WHITELIST: "*"
+
+  zookeeper-2:
+    image: docker.io/bitnami/zookeeper:3.7
+    environment:
+      ZOO_SERVER_ID: 2
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+      ZOO_SERVERS: "zookeeper-1:2888:3888,zookeeper-2:2888:3888,zookeeper-3:2888:3888"
+      ZOO_4LW_COMMANDS_WHITELIST: "*"
+
+  zookeeper-3:
+    image: docker.io/bitnami/zookeeper:3.7
+    environment:
+      ZOO_SERVER_ID: 3
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+      ZOO_SERVERS: "zookeeper-1:2888:3888,zookeeper-2:2888:3888,zookeeper-3:2888:3888"
+      ZOO_4LW_COMMANDS_WHITELIST: "*"
+
+  kafka-1:
+    image: docker.io/bitnami/kafka:3
+    ports:
+      - 29093:29093
+    environment:
+      KAFKA_CFG_BROKER_ID: 1
+      KAFKA_ADVERTISED_HOST_NAME: kafka-1
+      KAFKA_CFG_ZOOKEEPER_CONNECT: "zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_CFG_MIN_INSYNC_REPLICAS: 1
+      KAFKA_CFG_NUM_REPLICA_FETCHERS: 3
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_CFG_LISTENERS: "CLIENT://0.0.0.0:9092,EXTERNAL://0.0.0.0:29093"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "CLIENT://kafka-1:9092,EXTERNAL://localhost:29093"
+      KAFKA_INTER_BROKER_LISTENER_NAME: CLIENT
+      JMX_PORT: 9000
+      KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka-1 -Dcom.sun.management.jmxremote.rmi.port=9000"
+    depends_on:
+      - zookeeper-1
+      - zookeeper-2
+      - zookeeper-3
+
+  kafka-2:
+    image: docker.io/bitnami/kafka:3
+    ports:
+      - 29094:29094
+    environment:
+      KAFKA_CFG_BROKER_ID: 2
+      KAFKA_ADVERTISED_HOST_NAME: kafka-2
+      KAFKA_CFG_ZOOKEEPER_CONNECT: "zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_CFG_MIN_INSYNC_REPLICAS: 1
+      KAFKA_CFG_NUM_REPLICA_FETCHERS: 3
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_CFG_LISTENERS: "CLIENT://0.0.0.0:9092,EXTERNAL://0.0.0.0:29094"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "CLIENT://kafka-2:9092,EXTERNAL://localhost:29094"
+      KAFKA_INTER_BROKER_LISTENER_NAME: CLIENT
+      JMX_PORT: 9000
+      KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka-2 -Dcom.sun.management.jmxremote.rmi.port=9000"
+    depends_on:
+      - zookeeper-1
+      - zookeeper-2
+      - zookeeper-3
+
+  kafka-3:
+    image: docker.io/bitnami/kafka:3
+    ports:
+      - 29095:29095
+    environment:
+      KAFKA_CFG_BROKER_ID: 3
+      KAFKA_ADVERTISED_HOST_NAME: kafka-3
+      KAFKA_CFG_ZOOKEEPER_CONNECT: "zookeeper-1:2181,zookeeper-2:2181,zookeeper-3:2181"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_CFG_MIN_INSYNC_REPLICAS: 1
+      KAFKA_CFG_NUM_REPLICA_FETCHERS: 3
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CLIENT:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_CFG_LISTENERS: "CLIENT://0.0.0.0:9092,EXTERNAL://0.0.0.0:29095"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "CLIENT://kafka-3:9092,EXTERNAL://localhost:29095"
+      KAFKA_INTER_BROKER_LISTENER_NAME: CLIENT
+      JMX_PORT: 9000
+      KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka-3 -Dcom.sun.management.jmxremote.rmi.port=9000"
+    depends_on:
+      - zookeeper-1
+      - zookeeper-2
+      - zookeeper-3
+
+# Monitoring infrastructure: JMX exporters:5556 <- Prometheus:9090 <- Grafana:3000 <- Client Browser
+
+  jmxexporter-1: &jmxexporter
+    image: sscaling/jmx-prometheus-exporter
+    volumes:
+      - $PWD/etc/jmxexporter/jmxexporter-1.yml:/opt/jmx_exporter/config.yml:ro
+    ports:
+      - 15556:5556
+    environment:
+      SERVICE_PORT: 5556
+    depends_on:
+      - kafka-1
+
+  jmxexporter-2:
+    <<: *jmxexporter
+    volumes:
+      - $PWD/etc/jmxexporter/jmxexporter-2.yml:/opt/jmx_exporter/config.yml:ro
+    ports:
+      - 25556:5556
+    depends_on:
+      - kafka-2
+
+  jmxexporter-3:
+    <<: *jmxexporter
+    volumes:
+      - $PWD/etc/jmxexporter/jmxexporter-3.yml:/opt/jmx_exporter/config.yml:ro
+    ports:
+      - 35556:5556
+    depends_on:
+      - kafka-3
+
+  prometheus:
+    image: prom/prometheus:v2.31.1
+    volumes:
+      - $PWD/etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=1d'
+    depends_on:
+      - jmxexporter-1
+      - jmxexporter-2
+      - jmxexporter-3
+
+  grafana:
+    image: grafana/grafana:8.2.6
+    volumes:
+      - $PWD/etc/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=password
+    ports:
+      - 3000:3000
+    depends_on:
+      - prometheus

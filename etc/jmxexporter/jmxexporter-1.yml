@@ -1,0 +1,10 @@
+---
+hostPort: kafka-1:9000
+username:
+password:
+ssl: false
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+whitelistObjectNames: ["*.*:*"]
+rules:
+  - pattern: ".*"

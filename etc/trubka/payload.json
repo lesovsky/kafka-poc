@@ -1,0 +1,11 @@
+{
+  "request_id": "UUID()",
+  "received_at": "Now()",
+  "user": {
+    "id": "FirstName():LastName():IntS(10,50)",
+    "machine": "MacAddress()-IP(v4)",
+    "token": "B64(T-Str(????)-IntS(#####))"
+  },
+  "origin": "PickS(IP(v4), IP(v6))",
+  "credit_card": "CreditCardNumberS() CreditCardCvv() CreditCardExp()"
+}
